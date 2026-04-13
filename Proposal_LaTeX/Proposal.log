@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.4.8)  13 APR 2026 11:05
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.4.8)  13 APR 2026 13:43
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/Users/rkala/OneDrive/Desktop/GNN-for-CT-Mapping/GNN_for_CT_Mapping/Proposal_LaTeX/Proposal.tex
-(c:/Users/rkala/OneDrive/Desktop/GNN-for-CT-Mapping/GNN_for_CT_Mapping/Proposal_LaTeX/Proposal.tex
+**c:/Users/rkala/OneDrive/Desktop/GNN-for-CT-Mapping/Proposal_LaTeX/Proposal.tex
+(c:/Users/rkala/OneDrive/Desktop/GNN-for-CT-Mapping/Proposal_LaTeX/Proposal.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
 (C:\Users\rkala\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
@@ -204,14 +204,14 @@ L3 programming layer <2026-01-19>
  ) 
 Here is how much of TeX's memory you used:
  2932 strings out of 467867
- 43963 string characters out of 5418335
+ 43830 string characters out of 5418335
  457392 words of memory out of 5000000
  31839 multiletter control sequences out of 15000+600000
  629884 words of font info for 47 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 57i,5n,65p,1300b,176s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 57i,5n,65p,1324b,176s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/rkala/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/rkala/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/rkala/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti12.pfb>
-Output written on Proposal.pdf (3 pages, 62014 bytes).
+Output written on Proposal.pdf (3 pages, 62694 bytes).
 PDF statistics:
  27 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
