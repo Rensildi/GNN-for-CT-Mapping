@@ -1,0 +1,83 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\setstretch{1.1}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+
+\begin{document}
+
+\begin{center}
+    {\Large \textbf{Graph Neural Networks for CT-Based Representation Learning and Similarity Mapping of Known and Unknown Lung Nodule Patterns}}\\[1.5em]
+
+    Swathi Gopal\\
+    Harrison Lavins\\
+    Rensildi Kalanxhi\\[1em]
+
+    CSC 7760 Deep Learning\\
+    Professor Ming Dong\\
+    April 6, 2026
+\end{center}
+
+\section*{Abstract}
+
+This project investigates whether Graph Neural Networks (GNNs) can learn meaningful relationships among lung nodules in CT scans and use those learned representations to analyze how uncertain or previously unseen nodule patterns relate to known groups. Using the publicly available LIDC-IDRI dataset, each lung nodule is represented as a node in a graph, while edges connect nodules with similar CT-derived features. The main model used in this work is a GraphSAGE-based GNN, which learns node embeddings for classification of known lung nodule patterns. To support analysis of uncertain or out-of-distribution cases, Mahalanobis distance will be applied in the learned embedding space to measure similarity between unknown nodules and the known classes. Rather than assigning a completely new label, the goal is to determine which known pattern an uncertain case is most closely related to, while also identifying nodules that fall outside the training distribution. By focusing on a GNN-based framework with distance-based similarity analysis, this project provides a realistic and focused approach for studying representation learning and open-set reasoning in lung CT analysis.
+
+\section*{Goal}
+
+The goals of this project are:
+
+\begin{enumerate}[label=\arabic*.]
+    \item To use a Graph Neural Network to learn feature relationships among lung nodules from CT scans.
+    \item To classify known lung nodule patterns using graph-based node embeddings.
+    \item To use Mahalanobis distance in the learned embedding space to analyze uncertain or out-of-distribution nodules relative to the known groups.
+\end{enumerate}
+
+\section*{Background}
+
+Deep learning methods have shown strong performance in medical imaging, but many models treat each sample independently and do not explicitly model relationships between similar cases. In lung CT analysis, nodules with related imaging characteristics may contain useful structural information that is difficult to capture with standard independent classification models. Graph Neural Networks provide a way to represent each lung nodule as part of a larger graph structure, where nodules with similar features can influence one another through neighborhood aggregation.
+
+In addition, many deep learning models struggle when they encounter out-of-distribution inputs or uncertain cases that differ from the training data. In medical settings, this is especially important because a model should not make overconfident predictions on unfamiliar patterns. To address this issue, this project combines graph-based representation learning with distance-based uncertainty analysis. After learning graph embeddings for lung nodules, Mahalanobis distance will be used to measure how closely uncertain nodules relate to the known classes in the embedding space. This allows the project to move beyond standard closed-set classification and toward a similarity-based analysis of known and unknown nodule patterns.
+
+\section*{Deep Learning Model}
+
+The main model used in this project is a \textbf{Graph Neural Network} based on \textbf{GraphSAGE}. In the proposed graph, each node represents a lung nodule, and edges connect nodules that are similar based on extracted CT imaging features. GraphSAGE is used to aggregate neighborhood information and learn node-level embeddings that capture relationships among nodules in the dataset.
+
+The learned node embeddings will be used for two purposes. First, they will support classification of known nodule patterns. Second, they will provide a representation space for uncertainty and similarity analysis. For nodules that do not strongly match the known groups, \textbf{Mahalanobis distance} will be applied in the embedding space to determine how close each uncertain nodule is to the known class distributions. This allows the model to identify whether a nodule is likely in-distribution or out-of-distribution, and if uncertain, which known class it most closely resembles.
+
+The scope of the project is intentionally limited to the GNN model and Mahalanobis-based similarity analysis in order to keep the work focused, realistic, and aligned with the project timeline.
+
+\section*{Experiments Planned}
+
+The first experiment will construct a graph from lung nodules in the LIDC-IDRI dataset and train a GraphSAGE model to classify known nodule patterns based on node features and graph structure.
+
+The second experiment will analyze the learned node embeddings to determine whether the GNN creates meaningful clustering of known patterns in the embedding space.
+
+The third experiment will apply Mahalanobis distance to the learned embeddings in order to evaluate uncertain or weakly matched nodules. This experiment will measure whether nodules that do not fit the known training distribution can be identified as out-of-distribution and whether they can still be related to the nearest known class through similarity analysis.
+
+Together, these experiments will evaluate both classification performance and the usefulness of the learned graph representation for analyzing known and uncertain lung nodule patterns.
+
+\section*{Dataset}
+
+The dataset used in this project is \textbf{LIDC-IDRI}, a public lung CT dataset containing thoracic CT scans and annotated lung nodules. This dataset is suitable for the project because it provides lesion-level information that can be used to construct a graph and train a Graph Neural Network model. Since CT imaging captures lesion and nodule structure rather than individual cancer cells, the main unit of analysis in this study is the lung nodule.
+
+For this project, each nodule will be represented as a node in the graph, and similarity relationships among nodules will define the graph edges. This makes LIDC-IDRI an appropriate dataset for graph-based representation learning and similarity analysis.
+
+\section*{References}
+
+\begin{enumerate}[label={[\arabic*]}]
+    \item Zhang, J., Ding, Y., \& Mazurowski, M. A. (2020). \textit{Towards safe and reliable deep learning for lung nodule malignancy estimation using out-of-distribution detection}.
+    \item Hamilton, W., Ying, Z., \& Leskovec, J. (2017). \textit{Inductive Representation Learning on Large Graphs}.
+    \item Lee, K., Lee, K., Lee, H., \& Shin, J. (2018). \textit{A Simple Unified Framework for Detecting Out-of-Distribution Samples and Adversarial Attacks}.
+    \item LIDC-IDRI Dataset.
+\end{enumerate}
+
+\end{document}
