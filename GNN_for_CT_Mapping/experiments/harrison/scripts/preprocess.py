@@ -210,27 +210,45 @@ def label_and_aggregate(cluster: NoduleCluster) -> dict | None:
     return row
 
 
-def build_series_to_dicom_map(metadata_csv: Path) -> dict[str, Path]:
-    """Map SeriesInstanceUID -> on-disk DICOM directory from metadata.csv.
+def build_series_to_dicom_map(metadata_csv: Path) -> dict[str, dict]:
+    """Map SeriesInstanceUID -> {'dicom_dir': Path, 'patient_id': str}.
 
-    LIDC's TCIA export includes a `metadata.csv` with one row per series;
-    the `File Location` column gives a relative path from the dataset root
-    (e.g. `./LIDC-IDRI-0001/.../1.3.6...`). The metadata.csv's parent
-    directory is the dataset root.
+    LIDC's TCIA `metadata.csv` has one row per CT series. The on-disk
+    layout produced by the NBIA Data Retriever puts each series at
+
+        <lidc_root>/lidc_idri/<PatientID>/<StudyInstanceUID>/<SeriesInstanceUID>/
+
+    so we construct the DICOM directory directly from three columns rather
+    than trusting the CSV's file-path column (which is sometimes a stale
+    mirror, e.g. referring to a different machine's username).
+
+    Column-name handling is robust to whitespace and case because TCIA has
+    shipped at least three minor variants over the years.
     """
     df = pd.read_csv(metadata_csv)
-    root = metadata_csv.parent.parent  # metadata/ -> dataset root
-    # Column names vary slightly across TCIA exports — normalize to lowercase
-    # and strip spaces so we're resilient to minor label changes.
-    cols = {c.lower().strip(): c for c in df.columns}
-    series_col = cols.get("series uid") or cols.get("series instance uid") or "Series UID"
-    path_col = cols.get("file location") or cols.get("filename") or "File Location"
+    # metadata.csv lives at <lidc_root>/metadata/metadata.csv — so two
+    # parents up is the dataset root.
+    lidc_root = metadata_csv.parent.parent
 
-    mapping: dict[str, Path] = {}
+    # Normalize column names to no-space lowercase so lookup is robust.
+    cols = {c.replace(" ", "").lower(): c for c in df.columns}
+    series_col = cols.get("seriesinstanceuid") or cols.get("seriesuid")
+    study_col = cols.get("studyinstanceuid") or cols.get("studyuid")
+    patient_col = cols.get("patientid")
+    if not (series_col and study_col and patient_col):
+        raise KeyError(
+            f"metadata.csv is missing required columns. Found: {list(df.columns)}"
+        )
+
+    mapping: dict[str, dict] = {}
     for _, row in df.iterrows():
         series_uid = str(row[series_col]).strip()
-        rel_path = str(row[path_col]).strip().lstrip("./")
-        mapping[series_uid] = (root / rel_path).resolve()
+        study_uid = str(row[study_col]).strip()
+        patient_id = str(row[patient_col]).strip()
+        if not series_uid or series_uid == "nan":
+            continue
+        dicom_dir = lidc_root / "lidc_idri" / patient_id / study_uid / series_uid
+        mapping[series_uid] = {"dicom_dir": dicom_dir, "patient_id": patient_id}
     return mapping
 
 
@@ -250,6 +268,8 @@ def main() -> None:
                         help="Path to GNN_for_CT_Mapping/data/annotations")
     parser.add_argument("--out", type=Path, required=True,
                         help="Output parquet path")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Dev only: stop after this many XML files. Useful for smoke-testing before a full run.")
     args = parser.parse_args()
 
     metadata_csv = args.lidc_root / "metadata" / "metadata.csv"
@@ -257,12 +277,18 @@ def main() -> None:
 
     rows: list[dict] = []
 
-    for xml_path in tqdm(list(iter_xml_files(args.annotations_root)), desc="XML"):
+    xml_files = list(iter_xml_files(args.annotations_root))
+    if args.limit is not None:
+        xml_files = xml_files[:args.limit]
+
+    for xml_path in tqdm(xml_files, desc="XML"):
         scan = parse_xml(xml_path)
-        dicom_dir = series_to_dir.get(scan.series_instance_uid)
-        if dicom_dir is None or not dicom_dir.exists():
+        meta = series_to_dir.get(scan.series_instance_uid)
+        if meta is None or not meta["dicom_dir"].exists():
             # Missing DICOM for this XML — skip without failing the whole run.
             continue
+        dicom_dir = meta["dicom_dir"]
+        patient_id = meta["patient_id"]
 
         # Only read DICOM headers here if we actually have nodules to place.
         if not scan.nodules:
@@ -276,16 +302,6 @@ def main() -> None:
         # Compute per-reader centroids in physical space, then cluster.
         pairs = [(n, compute_reader_centroid(n, volume)) for n in scan.nodules]
         clusters = cluster_readers(pairs)
-
-        # Patient ID from the DICOM header — more reliable than XML's
-        # PatientID field which is often missing.
-        patient_id = None
-        try:
-            import pydicom
-            first_dcm = next(dicom_dir.glob("*.dcm"))
-            patient_id = str(pydicom.dcmread(first_dcm, stop_before_pixels=True).PatientID)
-        except Exception:
-            patient_id = None
 
         for cluster in clusters:
             row = label_and_aggregate(cluster)
