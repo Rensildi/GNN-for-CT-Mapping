@@ -1,0 +1,22 @@
+# Normalize line endings
+* text=auto
+
+# Notebooks — strip outputs and metadata before commit to eliminate spurious conflicts.
+# One-time setup after cloning: pip install nbstripout && nbstripout --install
+*.ipynb filter=nbstripout diff=ipynb
+
+# Binary files — mark explicitly so git never attempts a text merge
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pdf  binary
+*.docx binary
+*.gz   binary
+*.pt   binary
+*.pth  binary
+*.ckpt binary
+*.h5   binary
+*.hdf5 binary
+*.pkl  binary
+*.npy  binary
+*.npz  binary

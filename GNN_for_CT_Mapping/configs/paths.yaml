@@ -1,0 +1,14 @@
+# Local paths — copy this file to paths.local.yaml and fill in your values.
+# paths.local.yaml is gitignored.
+
+data:
+  lidc_idri_root: /path/to/LIDC-IDRI        # root dir of CT volumes
+  luna25_root: /path/to/LUNA25
+  annotations_dir: data/annotations
+  splits_dir: data/splits
+
+outputs:
+  checkpoints_dir: outputs/checkpoints
+  predictions_dir: outputs/predictions
+  runs_dir: runs                             # TensorBoard logs
+  figures_dir: figures

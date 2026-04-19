@@ -1,230 +1,133 @@
-# GNN-for-CT-Mapping
+# GNN for CT Mapping — Lung Nodule Malignancy Classification
 
-# LaTeX Setup in VS Code (Windows and Ubuntu)
+Graph Neural Network-based malignancy classification of lung nodules in CT scans, developed for CSC 7760 Deep Learning.
 
-This guide explains how to set up **LaTeX in Visual Studio Code** for both **Windows** and **Ubuntu Linux** users.
-
-## What you need
-
-No matter which operating system you use, you need these two things:
-
-1. **Visual Studio Code**
-2. **LaTeX Workshop** extension in VS Code
-
-After that, each operating system also needs a **LaTeX distribution** installed on the computer.
+**Authors:** Rensildi Kalanxhi, Harrison Lavins, Swathi Gopal
 
 ---
 
-# Windows Setup
+## Goal
 
-For Windows, this guide uses:
+Current deep learning models classify lung nodules independently, ignoring relationships between similar cases. This project builds a GNN that constructs a patient-level graph over nodules and performs malignancy classification by aggregating information across neighbors. A secondary goal is uncertainty quantification using Mahalanobis distance in the learned embedding space to flag out-of-distribution cases.
 
-- **MiKTeX**
-- **Strawberry Perl**
-- **LaTeX Workshop**
+## Architecture
 
-## Step 1: Install Visual Studio Code
+<img src="proposal/architecture_diagram_v3.png" width="500" alt="System architecture diagram"/>
 
-Download and install Visual Studio Code from the official website.
+Two-stage pipeline:
 
-## Step 2: Install the LaTeX Workshop extension
+**Stage 1 — Multi-modal feature extraction (frozen at inference)**
 
-1. Open **VS Code**.
-2. Click the **Extensions** icon on the left sidebar.
-3. Search for **LaTeX Workshop**.
-4. Install the extension by **James-Yu**.
+Each nodule is represented by three fused components:
+- **Image:** 48³-voxel CT patch → frozen Med3D ResNet-50 → linear projection
+- **Clinical:** 8 LIDC-IDRI radiologist attributes (subtlety, sphericity, margin, etc.) → learned embeddings
+- **Spatial:** (x, y, z) coordinates → sinusoidal positional encoding
 
-## Step 3: Install MiKTeX
+**Stage 2 — Graph construction and classification (trained)**
 
-1. Go to the official MiKTeX download page.
-2. Download the **Basic MiKTeX Installer** for Windows.
-3. Run the installer.
-4. Keep the default settings unless you have a specific reason to change them.
-5. When installation finishes, open **MiKTeX Console** once and allow it to complete any first-time setup.
+- KNN graph over nodule feature vectors (cosine similarity, default k=10)
+- 2-layer custom GCN with dropout
+- Binary classification head (benign / malignant)
+- Weighted cross-entropy loss for class imbalance
+- Mahalanobis distance in embedding space for OOD detection
 
-### Recommended MiKTeX settings
+## Datasets
 
-Inside **MiKTeX Console**:
+| Dataset | Scans | Nodules | Labels |
+|---------|-------|---------|--------|
+| LIDC-IDRI (primary) | 1,018 | 7,371 | Up to 4 radiologist scores per nodule; binarized at ≤2 / ≥4 |
+| LUNA25 (cross-dataset eval) | 4,096 | 6,163 | Binary from clinical follow-up |
 
-- Update packages if updates are available.
-- Turn on **install missing packages on-the-fly** if it is not already enabled.
+Full CT volumes are not stored in this repository. See [`GNN_for_CT_Mapping/data/README.md`](GNN_for_CT_Mapping/data/README.md) for download instructions.
 
-This helps MiKTeX automatically install packages that your `.tex` file needs.
+## Repository Structure
 
-## Step 4: Install Strawberry Perl
-
-1. Go to the official Strawberry Perl website.
-2. Download the **64-bit MSI** installer.
-3. Run the installer.
-4. Restart VS Code after installation.
-
-> Why is Strawberry Perl needed?
-> 
-> LaTeX Workshop commonly uses `latexmk` for building LaTeX projects, and `latexmk` requires **Perl**.
-
-## Step 5: Check that the tools are available
-
-Open **Command Prompt** or the **VS Code terminal** and run:
-
-```bash
-pdflatex --version
-latexmk --version
-perl --version
+```
+.
+├── requirements.txt
+├── GNN_for_CT_Mapping/
+│   ├── src/                # Shared, reviewed Python package
+│   │   ├── data/           # Dataset classes, pylidc loaders, preprocessing
+│   │   ├── models/         # Promoted model architectures
+│   │   ├── training/       # Training loops, loss functions, metrics
+│   │   └── utils/          # Shared helpers
+│   ├── scripts/            # Shared entry-point scripts (train, evaluate, preprocess)
+│   ├── notebooks/          # Shared Jupyter notebooks for EDA and analysis
+│   ├── configs/
+│   │   ├── default.yaml    # Shared hyperparameters (edit via PR)
+│   │   └── paths.yaml      # Dataset path template (copy → paths.local.yaml)
+│   ├── data/
+│   │   ├── annotations/    # LIDC-IDRI nodule metadata and attribute CSVs
+│   │   └── splits/         # Patient-level CV fold definitions
+│   ├── experiments/
+│   │   ├── harrison/       # Personal notebooks, model variants, config overrides
+│   │   ├── swathi/         # (each: notebooks/, models/, scripts/, configs/, figures/)
+│   │   └── rensildi/
+│   ├── outputs/            # gitignored — checkpoints and predictions
+│   ├── runs/               # gitignored — TensorBoard event files
+│   └── figures/            # Shared plots and diagrams (committed)
+└── proposal/               # Project proposal (Markdown + LaTeX source + PDF + architecture diagram)
 ```
 
-If these commands return version information, the setup is working.
+## Setup
 
-## Step 6: Build the PDF in VS Code
-
-1. Open the folder that contains `test.tex` in VS Code.
-2. Open `main.tex`.
-3. Build the document using one of these methods:
-   - Click the **Build LaTeX project** button from LaTeX Workshop, or
-   - Open the Command Palette and run the LaTeX build command.
-4. Open the PDF preview in VS Code.
-
-If everything is set up correctly, a PDF will be generated.
-
-
-# Ubuntu Setup
-
-For **Ubuntu**, the easiest and most reliable setup is usually:
-
-- **TeX Live**
-- **LaTeX Workshop**
-
-Although **MiKTeX is available on selected Linux distributions**, **TeX Live is usually the simpler and more recommended option on Linux**.
-
-## Step 1: Install Visual Studio Code
-
-Install Visual Studio Code on Ubuntu.
-
-## Step 2: Install the LaTeX Workshop extension
-
-1. Open **VS Code**.
-2. Go to **Extensions**.
-3. Search for **LaTeX Workshop**.
-4. Install it.
-
-## Step 3: Install TeX Live
-
-Open a terminal and run:
+Run these commands once after cloning:
 
 ```bash
-sudo apt update
-sudo apt install texlive-full
+# Activate the virtual environment
+source AI/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the notebook output filter (prevents spurious notebook conflicts)
+nbstripout --install
+
+# Set up your local dataset paths
+cp GNN_for_CT_Mapping/configs/paths.yaml GNN_for_CT_Mapping/configs/paths.local.yaml
+# Edit paths.local.yaml with the paths to your local CT volume directories
 ```
 
-This is the easiest option because it installs a complete LaTeX environment and also pulls in tools commonly needed for building documents.
+## Workflow
 
-> Note:
-> `texlive-full` is large. It takes more disk space, but it avoids many missing-package issues.
+### Day-to-day experimentation
 
-## Step 4: Check that the tools are available
+All personal work — notebooks, model variants, training scripts, and result figures — lives under `GNN_for_CT_Mapping/experiments/<your-name>/`. This keeps each person's work isolated and avoids merge conflicts on shared files.
 
-Run these commands:
+Each person has a `configs/experiment.yaml` that is merged on top of the shared `default.yaml` at load time. Only specify the keys you are changing:
+
+```yaml
+# experiments/harrison/configs/experiment.yaml
+model:
+  gcn_layers: 3
+graph:
+  k_neighbors: 15
+```
+
+Model checkpoints and predictions write to `outputs/` using a named subdirectory so runs don't overwrite each other (e.g. `outputs/checkpoints/harrison_3layer_gcn/`). That directory is gitignored.
+
+### Promoting work to shared code
+
+When a model variant, preprocessing step, or utility is ready for the whole team to build on, open a pull request to move it from `experiments/<your-name>/` into `src/`. Changes to `src/` and `configs/default.yaml` always go through a PR so the team can review before they affect everyone.
+
+### Avoiding merge conflicts
+
+- **Notebooks:** `nbstripout` is configured as a git filter (`.gitattributes`) and strips cell outputs and execution counts automatically on commit. This eliminates the most common source of notebook conflicts.
+- **Configs:** Use your personal `experiment.yaml` for overrides rather than editing `default.yaml` directly.
+- **Models:** Write variants in `experiments/<your-name>/models/` first; promote to `src/models/` via PR.
+- **Binary files:** `.gitattributes` marks images, PDFs, checkpoints, and serialized data as binary so git never attempts to merge them.
+
+### TensorBoard
 
 ```bash
-pdflatex --version
-latexmk --version
+tensorboard --logdir GNN_for_CT_Mapping/runs
 ```
 
-If both commands return version information, the installation is ready.
-
-## Step 5: Build the PDF in VS Code
-
-1. Open the project folder in **VS Code**.
-2. Open `test.tex`.
-3. Run the LaTeX build command from LaTeX Workshop.
-4. Open the generated PDF preview.
-
----
-
-# Ubuntu Alternative: MiKTeX instead of TeX Live
-
-If you specifically want to use **MiKTeX on Ubuntu**, it is supported only for **selected Linux distributions**.
-
-In that case:
-
-1. Open the official MiKTeX Linux installation page.
-2. Follow the Linux-specific instructions for your Ubuntu version.
-3. Make sure the LaTeX binaries are available in your system `PATH`.
-4. Verify the installation using:
+### Proposal PDF
 
 ```bash
-pdflatex --version
-latexmk --version
+cd proposal/Proposal_LaTeX
+pdflatex Proposal.tex
 ```
 
-Because Linux support can vary by distribution and version, it is safer to follow the official MiKTeX instructions directly instead of copying old commands from random websites.
-
----
-
-# Troubleshooting
-
-## Problem: `latexmk` not found
-
-This usually means the LaTeX build tool is not installed or not in your system `PATH`.
-
-- On **Windows**, make sure MiKTeX installed correctly and restart VS Code.
-- On **Ubuntu**, make sure TeX Live is installed properly.
-
-## Problem: `perl` not found on Windows
-
-This usually means **Strawberry Perl** is missing or not available in the terminal session yet.
-
-- Install Strawberry Perl.
-- Restart VS Code.
-- Try again.
-
-## Problem: PDF does not build in VS Code
-
-Check these:
-
-- The file must be saved as `.tex`
-- The main file should contain a valid LaTeX document structure
-- The LaTeX tools must be available in the terminal
-- Restart VS Code after installing MiKTeX or Perl
-
-## Problem: Missing package errors
-
-- On **MiKTeX**, allow automatic package installation.
-- On **Ubuntu with TeX Live**, using `texlive-full` avoids most missing-package errors.
-
----
-
-# Recommended setup summary
-
-## Windows
-
-Use:
-
-- VS Code
-- LaTeX Workshop
-- MiKTeX
-- Strawberry Perl
-
-## Ubuntu
-
-Recommended:
-
-- VS Code
-- LaTeX Workshop
-- TeX Live (`texlive-full`)
-
-Alternative:
-
-- VS Code
-- LaTeX Workshop
-- MiKTeX for Linux (only if you specifically want MiKTeX)
-
----
-
-# References
-
-- LaTeX Workshop (VS Code Marketplace): https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop
-- LaTeX Workshop installation wiki: https://github.com/James-Yu/LaTeX-Workshop/wiki/Install
-- MiKTeX download page: https://miktex.org/download
-- MiKTeX Linux installation page: https://miktex.org/howto/install-miktex-unx
-- Strawberry Perl: https://strawberryperl.com/
-- TeX Live: https://www.tug.org/texlive/
+For LaTeX environment setup (Windows and Ubuntu), see [`proposal/Proposal_LaTeX/LATEX_SETUP.md`](proposal/Proposal_LaTeX/LATEX_SETUP.md).

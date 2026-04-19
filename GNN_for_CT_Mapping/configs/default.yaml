@@ -1,0 +1,26 @@
+model:
+  image_feature_dim: 512        # Med3D ResNet-50 output dim
+  clinical_embed_dim: 64        # per-attribute embedding size
+  node_feature_dim: 256         # unified node feature dim after fusion
+  gcn_hidden_dim: 128
+  gcn_layers: 2
+  dropout: 0.3
+
+graph:
+  k_neighbors: 10               # KNN graph construction
+  similarity: cosine            # cosine | euclidean
+
+training:
+  epochs: 100
+  batch_size: 1                 # one graph (patient) per step
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  class_weights: auto           # auto | [w_benign, w_malignant]
+  cv_folds: 5
+  seed: 42
+
+data:
+  patch_size: [48, 48, 48]      # voxels
+  label_threshold:
+    benign: 2                   # mean radiologist score <= 2
+    malignant: 4                # mean radiologist score >= 4
