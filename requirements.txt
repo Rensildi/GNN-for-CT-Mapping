@@ -1,0 +1,10 @@
+torch
+torch-geometric
+pylidc
+numpy
+scikit-learn
+matplotlib
+tensorboard
+pyyaml
+nbstripout
+jupyter

@@ -44,51 +44,86 @@ Full CT volumes are not stored in this repository. See [`GNN_for_CT_Mapping/data
 
 ```
 .
+├── requirements.txt
 ├── GNN_for_CT_Mapping/
-│   ├── src/                # Importable Python package
+│   ├── src/                # Shared, reviewed Python package
 │   │   ├── data/           # Dataset classes, pylidc loaders, preprocessing
-│   │   ├── models/         # GCN layers, feature extractors, fusion
+│   │   ├── models/         # Promoted model architectures
 │   │   ├── training/       # Training loops, loss functions, metrics
 │   │   └── utils/          # Shared helpers
-│   ├── scripts/            # Entry-point scripts (train, evaluate, preprocess)
-│   ├── notebooks/          # Jupyter notebooks for EDA and analysis
+│   ├── scripts/            # Shared entry-point scripts (train, evaluate, preprocess)
+│   ├── notebooks/          # Shared Jupyter notebooks for EDA and analysis
 │   ├── configs/
-│   │   ├── default.yaml    # Hyperparameters
+│   │   ├── default.yaml    # Shared hyperparameters (edit via PR)
 │   │   └── paths.yaml      # Dataset path template (copy → paths.local.yaml)
 │   ├── data/
 │   │   ├── annotations/    # LIDC-IDRI nodule metadata and attribute CSVs
 │   │   └── splits/         # Patient-level CV fold definitions
+│   ├── experiments/
+│   │   ├── harrison/       # Personal notebooks, model variants, config overrides
+│   │   ├── swathi/         # (each: notebooks/, models/, scripts/, configs/, figures/)
+│   │   └── rensildi/
 │   ├── outputs/            # gitignored — checkpoints and predictions
 │   ├── runs/               # gitignored — TensorBoard event files
-│   └── figures/            # Saved plots and diagrams (committed)
+│   └── figures/            # Shared plots and diagrams (committed)
 └── proposal/               # Project proposal (Markdown + LaTeX source + PDF + architecture diagram)
 ```
 
 ## Setup
 
+Run these commands once after cloning:
+
 ```bash
-# Create and activate the virtual environment
-python3 -m venv AI
+# Activate the virtual environment
 source AI/bin/activate
 
-# Install dependencies (once requirements.txt is added)
+# Install dependencies
 pip install -r requirements.txt
-```
 
-Configure local dataset paths:
+# Install the notebook output filter (prevents spurious notebook conflicts)
+nbstripout --install
 
-```bash
+# Set up your local dataset paths
 cp GNN_for_CT_Mapping/configs/paths.yaml GNN_for_CT_Mapping/configs/paths.local.yaml
-# Edit paths.local.yaml with your local CT volume directories
+# Edit paths.local.yaml with the paths to your local CT volume directories
 ```
 
-Launch TensorBoard:
+## Workflow
+
+### Day-to-day experimentation
+
+All personal work — notebooks, model variants, training scripts, and result figures — lives under `GNN_for_CT_Mapping/experiments/<your-name>/`. This keeps each person's work isolated and avoids merge conflicts on shared files.
+
+Each person has a `configs/experiment.yaml` that is merged on top of the shared `default.yaml` at load time. Only specify the keys you are changing:
+
+```yaml
+# experiments/harrison/configs/experiment.yaml
+model:
+  gcn_layers: 3
+graph:
+  k_neighbors: 15
+```
+
+Model checkpoints and predictions write to `outputs/` using a named subdirectory so runs don't overwrite each other (e.g. `outputs/checkpoints/harrison_3layer_gcn/`). That directory is gitignored.
+
+### Promoting work to shared code
+
+When a model variant, preprocessing step, or utility is ready for the whole team to build on, open a pull request to move it from `experiments/<your-name>/` into `src/`. Changes to `src/` and `configs/default.yaml` always go through a PR so the team can review before they affect everyone.
+
+### Avoiding merge conflicts
+
+- **Notebooks:** `nbstripout` is configured as a git filter (`.gitattributes`) and strips cell outputs and execution counts automatically on commit. This eliminates the most common source of notebook conflicts.
+- **Configs:** Use your personal `experiment.yaml` for overrides rather than editing `default.yaml` directly.
+- **Models:** Write variants in `experiments/<your-name>/models/` first; promote to `src/models/` via PR.
+- **Binary files:** `.gitattributes` marks images, PDFs, checkpoints, and serialized data as binary so git never attempts to merge them.
+
+### TensorBoard
 
 ```bash
 tensorboard --logdir GNN_for_CT_Mapping/runs
 ```
 
-Compile the proposal PDF:
+### Proposal PDF
 
 ```bash
 cd proposal/Proposal_LaTeX

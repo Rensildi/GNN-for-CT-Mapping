@@ -1,0 +1,10 @@
+# Harrison's experiment overrides — values here take precedence over default.yaml
+
+# Example overrides:
+# model:
+#   gcn_layers: 3
+#   dropout: 0.4
+#
+# graph:
+#   k_neighbors: 15
+#   similarity: euclidean
