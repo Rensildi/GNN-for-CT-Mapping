@@ -8,7 +8,7 @@ Graph Neural Network-based malignancy classification of lung nodules in CT scans
 
 ## Goal
 
-Current deep learning models classify lung nodules independently, ignoring relationships between similar cases. This project builds a GNN that constructs a patient-level graph over nodules and performs malignancy classification by aggregating information across neighbors. A secondary goal is uncertainty quantification using Mahalanobis distance in the learned embedding space to flag out-of-distribution cases.
+Current deep learning models classify lung nodules independently, ignoring relationships between similar cases. This project builds a GNN that constructs a patient-level graph over nodules and performs malignancy classification by aggregating information across neighbors.
 
 ## Architecture
 
@@ -29,7 +29,6 @@ Each nodule is represented by three fused components:
 - 2-layer custom GCN with dropout
 - Binary classification head (benign / malignant)
 - Weighted cross-entropy loss for class imbalance
-- Mahalanobis distance in embedding space for OOD detection
 
 ## Datasets
 

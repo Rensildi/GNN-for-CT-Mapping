@@ -1,10 +1,28 @@
-# Harrison's experiment overrides — values here take precedence over default.yaml
-
-# Example overrides:
-# model:
-#   gcn_layers: 3
-#   dropout: 0.4
+# Harrison's experiment overrides — values here take precedence over default.yaml.
 #
-# graph:
-#   k_neighbors: 15
-#   similarity: euclidean
+# Experiment 1 (GCN vs. MLP baseline) uses the default hyperparameters from
+# GNN_for_CT_Mapping/configs/default.yaml, so this file is intentionally
+# minimal. Override only what you change.
+
+experiment_name: harrison_exp1
+
+model:
+  # Med3D ResNet-50 outputs a 2048-dim pooled feature — override the shared
+  # default (which assumed 512) to match.
+  image_feature_dim: 2048
+
+training:
+  # Early-stopping patience on val AUC — from the execution plan §1.5.
+  patience: 15
+
+# Dataset paths used by scripts in this folder. Kept relative so the repo
+# is portable across machines; override via an --argument flag if your
+# layout differs.
+paths:
+  lidc_root: /media/talos/SchoolHD/deep_learning/LIDC-IDRI
+  annotations_root: GNN_for_CT_Mapping/data/annotations
+  nodules_parquet: GNN_for_CT_Mapping/data/nodules.parquet
+  features_parquet: GNN_for_CT_Mapping/outputs/features/med3d_resnet50.parquet
+  splits_dir: GNN_for_CT_Mapping/data/splits
+  predictions_dir: GNN_for_CT_Mapping/outputs/predictions
+  runs_dir: GNN_for_CT_Mapping/runs/harrison_exp1
