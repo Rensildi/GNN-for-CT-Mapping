@@ -113,9 +113,12 @@ def main() -> None:
     # Group by series so we only load each CT volume once; many nodules
     # share a series.
     for series_uid, series_group in tqdm(nodules.groupby("series_uid"), desc="series"):
-        dicom_dir = series_to_dir.get(series_uid)
-        if dicom_dir is None or not dicom_dir.exists():
+        meta = series_to_dir.get(series_uid)
+        # build_series_to_dicom_map returns {'dicom_dir': Path, 'patient_id': str}
+        # since we don't re-read patient_id from DICOM here — see preprocess.py.
+        if meta is None or not meta["dicom_dir"].exists():
             continue
+        dicom_dir = meta["dicom_dir"]
 
         try:
             raw_volume = load_series(dicom_dir)
