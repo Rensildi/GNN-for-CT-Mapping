@@ -32,10 +32,12 @@ from torch import nn
 # Values are 1-indexed in the LIDC XML; embeddings are indexed at rating-1
 # (so the Embedding's num_embeddings equals the top of the rating scale).
 #
-# Source: LIDC-IDRI annotation protocol (see the LIDC XML messageSchema).
+# Keys use the LIDC XML schema's camelCase tag names so they match
+# `scripts/parse_lidc_xml.py::ATTRIBUTE_TAGS` and the `<name>_mean`
+# columns emitted by `scripts/preprocess.py` without any translation.
 LIDC_ATTRIBUTE_VOCAB = {
     "subtlety": 5,           # 1–5
-    "internal_structure": 4, # 1–4
+    "internalStructure": 4,  # 1–4
     "calcification": 6,      # 1–6
     "sphericity": 5,         # 1–5
     "margin": 5,             # 1–5
