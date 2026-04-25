@@ -41,8 +41,8 @@ MED3D_ACCENT = "#F0E8D8"
 FMCIB_ACCENT = "#E0E9D6"
 
 
-CANVAS_W = 22.0
-CANVAS_H = 22.0
+CANVAS_W = 26.0
+CANVAS_H = 26.0
 
 
 def _box(ax, x, y, w, h, text, facecolor, fontsize=12, weight="normal",
@@ -122,7 +122,7 @@ def _draw_cell(ax, x, y, w, h, encoder_name, encoder_spec, accent,
 def render(out_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(CANVAS_W, CANVAS_H))
     ax.set_xlim(0, CANVAS_W)
-    ax.set_ylim(-2.6, CANVAS_H + 0.8)
+    ax.set_ylim(-3.6, CANVAS_H + 0.8)
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -136,66 +136,69 @@ def render(out_path: Path) -> None:
             ha="center", va="center", fontsize=13, color="dimgray")
 
     # --- Grid section ---
-    # Grid layout: two columns (encoders), three rows (feature configs).
-    grid_top = CANVAS_H - 1.4
-    grid_bottom = grid_top - 10.2
-    cell_w = 6.5
-    cell_h = 2.9
-    # Horizontal layout:
-    #   row-label column | Med3D column | FMCIB column
-    row_label_x = 1.0
-    row_label_w = 4.0
-    col1_x = row_label_x + row_label_w + 0.6
-    col2_x = col1_x + cell_w + 0.8
+    # Grid layout: row-label column | Med3D column | FMCIB column.
+    # Widths chosen so the longest row-description line (48 chars @ 11pt)
+    # fits inside the row-label box with ~0.3" margin on each side.
+    grid_top = CANVAS_H - 1.6
+    cell_w = 7.6
+    cell_h = 3.3
+    row_gap = 0.55
+    row_label_x = 0.8
+    row_label_w = 6.2
+    col1_x = row_label_x + row_label_w + 0.7
+    col2_x = col1_x + cell_w + 0.9
 
-    # Column headers (encoder names) above the grid.
-    ax.text(col1_x + cell_w / 2, grid_top + 0.4,
-            "Med3D ResNet-50  (baseline)",
-            ha="center", va="center", fontsize=15, weight="bold")
+    # Column headers (encoder names) above the grid. Spec text is split
+    # across two lines to avoid crowding the column edges.
+    ax.text(col1_x + cell_w / 2, grid_top + 0.5,
+            "Med3D ResNet-50   (baseline)",
+            ha="center", va="center", fontsize=16, weight="bold")
     ax.text(col1_x + cell_w / 2, grid_top - 0.05,
-            "48\u00b3 patches  \u2192  frozen encoder  \u2192  2048-D",
+            "48\u00b3 patches   \u2192   frozen encoder   \u2192   2048-D",
             ha="center", va="center", fontsize=11, color="dimgray")
 
-    ax.text(col2_x + cell_w / 2, grid_top + 0.4,
-            "FMCIB  (committed follow-up)",
-            ha="center", va="center", fontsize=15, weight="bold")
+    ax.text(col2_x + cell_w / 2, grid_top + 0.5,
+            "FMCIB   (committed follow-up)",
+            ha="center", va="center", fontsize=16, weight="bold")
     ax.text(col2_x + cell_w / 2, grid_top - 0.05,
-            "50\u00b3 patches  \u2192  frozen cancer-CT foundation model  \u2192  4096-D",
+            "50\u00b3 patches   \u2192   cancer-CT foundation model   \u2192   4096-D",
             ha="center", va="center", fontsize=11, color="dimgray")
 
-    # Column-header divider line.
+    # Column-header divider line under the two encoder labels.
     ax.plot([col1_x - 0.3, col2_x + cell_w + 0.3],
             [grid_top - 0.35, grid_top - 0.35],
             color="#888888", linewidth=1.0, zorder=0)
 
-    # Feature config rows.
+    # Feature config rows. Descriptions are manually line-broken so every
+    # line fits inside the row-label box width (no reliance on wrap=True,
+    # which doesn't actually clip to box width in matplotlib).
     feature_configs = [
         (
             "Image only",
-            "image branch only; attributes and spatial disabled",
+            "image branch is the sole Stage-1 input;\nattributes and spatial are disabled.",
             True, False, False,
         ),
         (
             "Image  +  attributes",
-            "Med3D / FMCIB image features fused with 8 radiologist attribute embeddings",
+            "adds the 8 radiologist attribute\nembeddings on top of the image branch.",
             True, True, False,
         ),
         (
             "Image  +  attributes  +  spatial",
-            "full Stage-1 fusion (matches Experiments 1 & 2)",
+            "full Stage-1 fusion\n(matches Experiments 1 and 2).",
             True, True, True,
         ),
     ]
 
     cell_idx = 1
     for r, (row_title, row_desc, use_image, use_attrs, use_spatial) in enumerate(feature_configs):
-        row_cy = grid_top - 1.0 - r * (cell_h + 0.45) - cell_h / 2
+        row_cy = grid_top - 1.1 - r * (cell_h + row_gap) - cell_h / 2
         # Row label box on the far left.
         _plain_box(ax, row_label_x, row_cy - cell_h / 2, row_label_w, cell_h, INPUT_COLOR)
-        ax.text(row_label_x + row_label_w / 2, row_cy + 0.55, row_title,
-                ha="center", va="center", fontsize=14, weight="bold")
-        ax.text(row_label_x + row_label_w / 2, row_cy - 0.3, row_desc,
-                ha="center", va="center", fontsize=10, color="#404040", wrap=True)
+        ax.text(row_label_x + row_label_w / 2, row_cy + 0.75, row_title,
+                ha="center", va="center", fontsize=15, weight="bold")
+        ax.text(row_label_x + row_label_w / 2, row_cy - 0.55, row_desc,
+                ha="center", va="center", fontsize=11, color="#404040")
 
         # Med3D cell.
         _draw_cell(ax, col1_x, row_cy - cell_h / 2, cell_w, cell_h,
@@ -210,96 +213,105 @@ def render(out_path: Path) -> None:
                    f"cell {cell_idx}")
         cell_idx += 1
 
-    # --- Funnel arrow into the shared pipeline ---
-    funnel_y_top = grid_bottom + 0.3
-    funnel_y_bot = funnel_y_top - 1.0
-    # Three small converging arrows: one from each row's right side down toward
-    # the shared pipeline's top edge center.
-    pipeline_cx = CANVAS_W / 2
-    for r in range(3):
-        row_cy = grid_top - 1.0 - r * (cell_h + 0.45) - cell_h / 2
-        # Draw an arrow from under each row toward the pipeline.
-        mid_x = (col1_x + col2_x + cell_w) / 2
-        _arrow(ax, mid_x, row_cy - cell_h / 2, pipeline_cx, funnel_y_bot,
-               color="#555555", lw=1.3)
+    grid_bottom = row_cy - cell_h / 2  # y-coordinate of the bottom-most row
 
-    ax.text(pipeline_cx, funnel_y_top - 0.4,
+    # --- Funnel caption, placed in its own strip below the grid ---
+    pipeline_cx = CANVAS_W / 2
+    caption_y = grid_bottom - 0.7
+    ax.text(pipeline_cx, caption_y,
             "Every cell runs the same downstream pipeline \u2014 only Stage 1's active branches and image encoder change.",
-            ha="center", va="center", fontsize=12, style="italic", color="dimgray")
+            ha="center", va="center", fontsize=13, style="italic", color="dimgray")
+
+    # Converging arrows from each row's bottom-center toward a single
+    # funnel target just above the fusion bar. The caption sits on its
+    # own strip so the arrows never cross text.
+    funnel_y_top = caption_y - 0.4
+    funnel_y_bot = funnel_y_top - 0.9
+    for r in range(3):
+        row_cy = grid_top - 1.1 - r * (cell_h + row_gap) - cell_h / 2
+        row_bottom = row_cy - cell_h / 2
+        # Only the bottom row's arrow actually reaches the funnel; the
+        # other two terminate at the caption strip so they don't cross
+        # subsequent row labels.
+        if r == 2:
+            src_x = (col1_x + col2_x + cell_w) / 2
+            _arrow(ax, src_x, row_bottom, pipeline_cx, funnel_y_bot,
+                   color="#555555", lw=1.4)
 
     # --- Shared pipeline ---
     y_fuse = funnel_y_bot - 1.4
-    h_fuse = 1.2
-    fuse_left = 2.5
-    fuse_width = CANVAS_W - 5.0
+    h_fuse = 1.3
+    fuse_width = 20.0
+    fuse_left = (CANVAS_W - fuse_width) / 2
     _box(ax, fuse_left, y_fuse, fuse_width, h_fuse,
-         "Stage 1 fusion  (active branches only)  \u2192   Concat   \u2192   LayerNorm   \u2192   Linear   \u2192   256-D node feature",
-         TRAINED_COLOR, fontsize=14, weight="bold")
+         "Stage 1 fusion  (active branches only)   \u2192   Concat   \u2192   LayerNorm   \u2192   Linear   \u2192   256-D node feature",
+         TRAINED_COLOR, fontsize=15, weight="bold")
     _arrow(ax, pipeline_cx, funnel_y_bot, pipeline_cx, y_fuse + h_fuse)
 
     # GCN head (unchanged from Exp 1 / Exp 2).
-    y_gcn = y_fuse - 1.6
-    h_gcn = 1.7
-    gcn_left = 4.0
-    gcn_width = CANVAS_W - 8.0
+    y_gcn = y_fuse - 1.8
+    h_gcn = 1.95
+    gcn_width = 16.0
+    gcn_left = (CANVAS_W - gcn_width) / 2
     _box(ax, gcn_left, y_gcn, gcn_width, h_gcn,
-         "2-layer GCN  (inherited from Experiment 1;  k = 10, cosine  by default)\n\n"
-         "GCNConv (256 \u2192 128)   +   ReLU   +   Dropout(0.3)\n"
-         "GCNConv (128 \u2192 64)    +   ReLU   +   Dropout(0.3)\n"
+         "2-layer GCN   (inherited from Experiment 1;   k = 10, cosine   by default)\n\n"
+         "GCNConv (256 \u2192 128)    +    ReLU    +    Dropout(0.3)\n"
+         "GCNConv (128 \u2192 64)     +    ReLU    +    Dropout(0.3)\n"
          "Linear (64 \u2192 2)",
-         GRAPH_COLOR, fontsize=12)
+         GRAPH_COLOR, fontsize=13)
     _arrow(ax, pipeline_cx, y_fuse, pipeline_cx, y_gcn + h_gcn)
 
     # Output head.
-    y_out = y_gcn - 1.5
-    h_out = 0.95
-    out_w = 8.0
+    y_out = y_gcn - 1.6
+    h_out = 1.05
+    out_w = 9.0
     _box(ax, (CANVAS_W - out_w) / 2, y_out, out_w, h_out,
          "softmax   \u2192   P(benign)   /   P(malignant)",
-         OUTPUT_COLOR, fontsize=13, weight="bold")
+         OUTPUT_COLOR, fontsize=14, weight="bold")
     _arrow(ax, pipeline_cx, y_gcn, pipeline_cx, y_out + h_out)
 
-    y_loss = y_out - 1.3
-    h_loss = 0.85
-    loss_w = 6.5
+    y_loss = y_out - 1.4
+    h_loss = 0.95
+    loss_w = 7.0
     _box(ax, (CANVAS_W - loss_w) / 2, y_loss, loss_w, h_loss,
          "Weighted Cross-Entropy",
-         OUTPUT_COLOR, fontsize=13)
+         OUTPUT_COLOR, fontsize=14)
     _arrow(ax, pipeline_cx, y_out, pipeline_cx, y_loss + h_loss)
 
     # --- Evaluation axis ---
-    y_eval_top = y_loss - 1.0
-    y_eval_bot = y_eval_top - 2.3
-    ax.text(pipeline_cx, y_eval_top - 0.1,
-            "Evaluation  —  run each of the 6 cells across 5 CV folds",
-            ha="center", va="center", fontsize=13, weight="bold")
+    y_eval_top = y_loss - 1.5
+    eval_box_h = 2.1
+    y_eval_bot = y_eval_top - 0.6 - eval_box_h
+    ax.text(pipeline_cx, y_eval_top - 0.2,
+            "Evaluation  \u2014  run each of the 6 cells across 5 CV folds",
+            ha="center", va="center", fontsize=14, weight="bold")
 
-    eval_box_w = 8.5
-    eval_box_h = 1.8
-    left_eval = 2.0
-    right_eval = CANVAS_W - 2.0 - eval_box_w
+    eval_box_w = 11.0
+    left_eval = 1.5
+    right_eval = CANVAS_W - 1.5 - eval_box_w
     # Left eval panel: all-nodule metrics.
     _box(ax, left_eval, y_eval_bot, eval_box_w, eval_box_h,
          "All-nodule val metrics   (secondary)\n\n"
-         "AUC  |  AUPRC  |  sensitivity / specificity\n"
-         "at Youden-J  |  Brier  |  reliability diagram",
+         "AUC   |   AUPRC   |   sensitivity / specificity at Youden-J\n"
+         "Brier score   |   10-bin reliability diagram",
          EVAL_COLOR, fontsize=12)
     # Right eval panel: pathology-confirmed subset (primary axis).
     _box(ax, right_eval, y_eval_bot, eval_box_w, eval_box_h,
          "Pathology-confirmed subset   (PRIMARY axis)\n\n"
-         "\u2248 157 nodules with biopsy / surgery / follow-up ground truth\n"
-         "metrics restricted to this subset, pooled across folds",
+         "\u2248 157 nodules with biopsy / surgery /\nfollow-up ground truth\n"
+         "metrics pooled across folds",
          EVAL_COLOR, fontsize=12, weight="bold",
-         edge_color="#7A4ABD", edge_lw=2.2)
+         edge_color="#7A4ABD", edge_lw=2.4)
 
     # Arrows from loss into both eval panels.
     _arrow(ax, pipeline_cx, y_loss, left_eval + eval_box_w / 2, y_eval_bot + eval_box_h,
-           color="#555555", lw=1.3)
+           color="#555555", lw=1.4)
     _arrow(ax, pipeline_cx, y_loss, right_eval + eval_box_w / 2, y_eval_bot + eval_box_h,
-           color="#555555", lw=1.3)
+           color="#555555", lw=1.4)
 
     # --- Legend ---
-    y_leg = -1.9
+    # Placed with a clear margin below the eval boxes so the two never touch.
+    y_leg = y_eval_bot - 1.2
     items = [
         ("Input", INPUT_COLOR),
         ("Frozen pretrained", FROZEN_COLOR),
@@ -308,12 +320,12 @@ def render(out_path: Path) -> None:
         ("Loss / output", OUTPUT_COLOR),
         ("Evaluation", EVAL_COLOR),
     ]
-    leg_w, leg_h = 3.1, 0.7
-    total = len(items) * leg_w + (len(items) - 1) * 0.3
+    leg_w, leg_h = 3.6, 0.75
+    total = len(items) * leg_w + (len(items) - 1) * 0.35
     lx = (CANVAS_W - total) / 2
     for label, color in items:
-        _box(ax, lx, y_leg, leg_w, leg_h, label, color, fontsize=11)
-        lx += leg_w + 0.3
+        _box(ax, lx, y_leg, leg_w, leg_h, label, color, fontsize=12)
+        lx += leg_w + 0.35
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
