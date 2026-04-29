@@ -44,6 +44,15 @@ BOLD_RE = re.compile(r"\*\*([^*]+)\*\*")
 ITALIC_RE = re.compile(r"(?<!\*)\*([^*]+)\*(?!\*)")
 INLINE_CODE_RE = re.compile(r"`([^`]+)`")
 
+# Image syntax: ![alt text](path). For the docx output we don't embed the
+# image; we render a centered, italic placeholder paragraph carrying the
+# alt text so the caller can drop the actual figure in by hand.
+IMAGE_RE = re.compile(r"^\s*!\[([^\]]*)\]\(([^)]+)\)\s*$")
+
+# Document body font. Times New Roman is the requested research-paper face.
+BODY_FONT = "Times New Roman"
+MONO_FONT = "Courier New"
+
 
 def _add_inline_runs(paragraph, text: str, base_bold: bool = False, base_italic: bool = False) -> None:
     """Tokenize text into inline-formatting runs and append to a paragraph.
@@ -81,14 +90,20 @@ def _add_inline_runs(paragraph, text: str, base_bold: bool = False, base_italic:
             styled.italic = True
             styled.bold = base_bold
         elif kind == "code":
-            styled.font.name = "Consolas"
+            styled.font.name = MONO_FONT
             styled.bold = base_bold
             styled.italic = base_italic
         cursor = m.end()
 
 
 def _is_table_separator(line: str) -> bool:
-    """Markdown table separator row, e.g. '|:---|:---:|---:|'."""
+    """Markdown table separator row, e.g. '|:---|:---:|---:|'.
+
+    Strict CommonMark requires three or more dashes per cell, but real-world
+    markdown tables sometimes use shorter forms like ':--:' or ':-:' for
+    narrow columns. We accept any positive run of dashes with optional
+    leading/trailing alignment colons.
+    """
     s = line.strip()
     if not (s.startswith("|") and s.endswith("|")):
         return False
@@ -96,7 +111,7 @@ def _is_table_separator(line: str) -> bool:
     cells = [c.strip() for c in inner.split("|")]
     if not cells:
         return False
-    return all(re.fullmatch(r":?-{3,}:?", c) for c in cells)
+    return all(re.fullmatch(r":?-+:?", c) for c in cells)
 
 
 def _split_table_row(line: str) -> list[str]:
@@ -113,18 +128,6 @@ def _emit_paragraph(doc, text: str, *, italic: bool = False, style: str = "Norma
     p = doc.add_paragraph(style=style)
     p.paragraph_format.space_after = Pt(6)
     _add_inline_runs(p, text, base_italic=italic)
-
-
-def _emit_horizontal_rule(doc) -> None:
-    """Markdown `---` becomes a paragraph with a thin top border."""
-    p = doc.add_paragraph()
-    # Easiest visible HR in python-docx without diving into XML: a centered
-    # short rule made of em-dashes. Keeps things simple and prints fine.
-    run = p.add_run("\u2014" * 30)
-    run.font.color.rgb = RGBColor(0xAA, 0xAA, 0xAA)
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before = Pt(8)
-    p.paragraph_format.space_after = Pt(8)
 
 
 def _emit_table(doc, rows: list[list[str]]) -> None:
@@ -156,26 +159,54 @@ def _emit_code_block(doc, code: str) -> None:
     """Monospace block. Multiple-line code is concatenated with line breaks."""
     p = doc.add_paragraph()
     run = p.add_run(code.rstrip())
-    run.font.name = "Consolas"
+    run.font.name = MONO_FONT
     run.font.size = Pt(9)
     p.paragraph_format.left_indent = Pt(18)
     p.paragraph_format.space_after = Pt(6)
 
 
+def _emit_figure_placeholder(doc, alt: str, path: str) -> None:
+    """Render an image reference as a centered placeholder paragraph.
+
+    The user wants the .md file to embed real images but the .docx file
+    to leave placeholders so that figures can be dropped in by hand at
+    layout time.
+    """
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(8)
+    label = alt.strip() if alt.strip() else Path(path).name
+    run = p.add_run(f"[Figure placeholder: {label}]")
+    run.italic = True
+    run.font.name = BODY_FONT
+    run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+
+
 def _setup_styles(doc) -> None:
-    """Tune base paragraph + heading styles for a readable academic look."""
+    """Tune base paragraph + heading styles for a research-paper look in
+    Times New Roman.
+    """
     styles = doc.styles
     # Base body style.
     normal = styles["Normal"]
-    normal.font.name = "Calibri"
+    normal.font.name = BODY_FONT
     normal.font.size = Pt(11)
     # Heading sizes.
     for name, size in [("Heading 1", 18), ("Heading 2", 15), ("Heading 3", 12), ("Heading 4", 11)]:
         try:
             s = styles[name]
+            s.font.name = BODY_FONT
             s.font.size = Pt(size)
             s.font.color.rgb = RGBColor(0x1F, 0x4E, 0x79)
             s.font.bold = True
+        except KeyError:
+            pass
+    # List paragraph styles also need the body font set explicitly so they
+    # don't fall back to the docx default.
+    for name in ("List Bullet", "List Number"):
+        try:
+            styles[name].font.name = BODY_FONT
         except KeyError:
             pass
 
@@ -197,9 +228,9 @@ def convert(md_path: Path, docx_path: Path) -> None:
             i += 1
             continue
 
-        # Horizontal rule
+        # Horizontal rule: skip silently. The user does not want line break
+        # separators in the docx; section structure is carried by headings.
         if stripped in ("---", "***", "___"):
-            _emit_horizontal_rule(doc)
             i += 1
             continue
 
@@ -265,6 +296,14 @@ def convert(md_path: Path, docx_path: Path) -> None:
                 p.paragraph_format.space_after = Pt(2)
                 _add_inline_runs(p, m.group(1))
                 i += 1
+            continue
+
+        # Image reference. The .md embeds real images; the .docx renders
+        # only a placeholder so figures can be inserted at layout time.
+        img_match = IMAGE_RE.match(line)
+        if img_match:
+            _emit_figure_placeholder(doc, img_match.group(1), img_match.group(2))
+            i += 1
             continue
 
         # Italic-only paragraph (closing footer line).

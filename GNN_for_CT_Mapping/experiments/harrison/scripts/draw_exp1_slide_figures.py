@@ -221,12 +221,6 @@ def render_per_fold_bars(out_path: Path) -> None:
     ax.set_axisbelow(True)
     ax.legend(loc="lower right", fontsize=11, frameon=True)
 
-    # Subtitle below title with the verdict.
-    ax.text(0.5, 0.965,
-            f"Paired Wilcoxon one-sided p = {EXP1_WILCOXON_P} (MLP > GCN on AUC)   ·   0 / 5 folds favor the GCN",
-            transform=ax.transAxes, ha="center", va="bottom",
-            fontsize=11, color=MID_GRAY, style="italic")
-
     # Keep extra headroom on the right so the mean-line labels don't clip.
     ax.set_xlim(-0.7, len(folds) + 0.05)
 
